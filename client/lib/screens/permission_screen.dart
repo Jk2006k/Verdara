@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import '../services/wallpaper_service.dart';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -188,9 +189,29 @@ class _PermissionScreenState
                                       ),
                                 ),
                           ),
-                      onPressed: () {
-                        // permissions later
-                      },
+                      onPressed: () async {
+  try {
+    await WallpaperService.openWallpaperPicker();
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Wallpaper picker opened"),
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(e.toString()),
+      ),
+    );
+  }
+},
                       child: const Text(
                         'Continue',
                         style: TextStyle(
