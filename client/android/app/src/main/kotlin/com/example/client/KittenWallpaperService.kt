@@ -1,10 +1,13 @@
 package com.example.client
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 
 class KittenWallpaperService : WallpaperService() {
 
@@ -14,36 +17,81 @@ class KittenWallpaperService : WallpaperService() {
 
     inner class KittenEngine : Engine() {
 
-        private val paint = Paint().apply {
-            color = Color.WHITE
-            textSize = 70f
-            isAntiAlias = true
+        private lateinit var morningBitmap: Bitmap
+        private lateinit var nightBitmap: Bitmap
+
+        private var showMorning = true
+
+        private val handler = Handler(Looper.getMainLooper())
+
+        private val swapRunnable = object : Runnable {
+            override fun run() {
+
+                showMorning = !showMorning
+
+                drawWallpaper()
+
+                handler.postDelayed(this, 5000)
+            }
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
+
+            morningBitmap =
+                BitmapFactory.decodeResource(
+                    resources,
+                    R.drawable.morning
+                )
+
+            nightBitmap =
+                BitmapFactory.decodeResource(
+                    resources,
+                    R.drawable.night
+                )
+
             drawWallpaper()
+
+            handler.postDelayed(swapRunnable, 5000)
+        }
+
+        override fun onDestroy() {
+            handler.removeCallbacks(swapRunnable)
+            super.onDestroy()
         }
 
         private fun drawWallpaper() {
-            val holder = surfaceHolder
 
             var canvas: Canvas? = null
 
             try {
-                canvas = holder.lockCanvas()
 
-                canvas?.drawColor(Color.BLACK)
+                canvas = surfaceHolder.lockCanvas()
 
-                canvas?.drawText(
-                    "Verdara Live Wallpaper",
-                    80f,
-                    200f,
-                    paint
+                if (canvas == null) return
+
+                val bitmap =
+                    if (showMorning)
+                        morningBitmap
+                    else
+                        nightBitmap
+
+                canvas.drawBitmap(
+                    bitmap,
+                    null,
+                    Rect(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    ),
+                    null
                 )
+
             } finally {
+
                 if (canvas != null) {
-                    holder.unlockCanvasAndPost(canvas)
+                    surfaceHolder.unlockCanvasAndPost(canvas)
                 }
             }
         }
