@@ -1,63 +1,67 @@
 package com.example.client
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
+import com.example.client.engine.WallpaperRenderer
 
 class KittenWallpaperService : WallpaperService() {
 
     override fun onCreateEngine(): Engine {
-        return KittenEngine()
+        return VerdaraEngine()
     }
 
-    inner class KittenEngine : Engine() {
+    inner class VerdaraEngine : Engine() {
 
-        private lateinit var morningBitmap: Bitmap
-        private lateinit var nightBitmap: Bitmap
-
-        private var showMorning = true
+        private lateinit var renderer: WallpaperRenderer
 
         private val handler = Handler(Looper.getMainLooper())
 
-        private val swapRunnable = object : Runnable {
-            override fun run() {
+        // Check every minute
+        private val refreshTime = 60 * 1000L
 
-                showMorning = !showMorning
+        private val wallpaperRunnable = object : Runnable {
+
+            override fun run() {
 
                 drawWallpaper()
 
-                handler.postDelayed(this, 5000)
+                handler.postDelayed(
+                    this,
+                    refreshTime
+                )
             }
         }
 
-        override fun onSurfaceCreated(holder: SurfaceHolder) {
-            super.onSurfaceCreated(holder)
+        override fun onCreate(surfaceHolder: SurfaceHolder) {
+            super.onCreate(surfaceHolder)
 
-            morningBitmap =
-                BitmapFactory.decodeResource(
-                    resources,
-                    R.drawable.morning
-                )
+            renderer = WallpaperRenderer(
+                this@KittenWallpaperService
+            )
+        }
 
-            nightBitmap =
-                BitmapFactory.decodeResource(
-                    resources,
-                    R.drawable.night
-                )
+        override fun onVisibilityChanged(visible: Boolean) {
 
-            drawWallpaper()
+            if (visible) {
 
-            handler.postDelayed(swapRunnable, 5000)
+                handler.post(wallpaperRunnable)
+
+            } else {
+
+                handler.removeCallbacks(wallpaperRunnable)
+
+            }
         }
 
         override fun onDestroy() {
-            handler.removeCallbacks(swapRunnable)
             super.onDestroy()
+
+            handler.removeCallbacks(
+                wallpaperRunnable
+            )
         }
 
         private fun drawWallpaper() {
@@ -68,31 +72,22 @@ class KittenWallpaperService : WallpaperService() {
 
                 canvas = surfaceHolder.lockCanvas()
 
-                if (canvas == null) return
+                if (canvas != null) {
 
-                val bitmap =
-                    if (showMorning)
-                        morningBitmap
-                    else
-                        nightBitmap
+                    renderer.draw(canvas)
 
-                canvas.drawBitmap(
-                    bitmap,
-                    null,
-                    Rect(
-                        0,
-                        0,
-                        canvas.width,
-                        canvas.height
-                    ),
-                    null
-                )
+                }
 
             } finally {
 
                 if (canvas != null) {
-                    surfaceHolder.unlockCanvasAndPost(canvas)
+
+                    surfaceHolder.unlockCanvasAndPost(
+                        canvas
+                    )
+
                 }
+
             }
         }
     }
